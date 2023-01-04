@@ -15,7 +15,7 @@
 #pragma config FOSC = INTRCIO     // Oscillator Selection bits (RC oscillator: CLKOUT function on GP4/OSC2/CLKOUT pin, RC on GP5/OSC1/CLKIN)
 #pragma config WDTE = OFF        // Watchdog Timer Enable bit (WDT enabled)
 #pragma config PWRTE = ON      // Power-Up Timer Enable bit (PWRT enabled)
-#pragma config MCLRE = ON       // GP3/MCLR pin function select (GP3/MCLR pin function is MCLR)
+#pragma config MCLRE = OFF       // GP3/MCLR pin function select (GP3/MCLR pin function is GP3)
 #pragma config BOREN = ON       // Brown-out Detect Enable bit (BOD enabled)
 #pragma config CP = OFF         // Code Protection bit (Program Memory code protection is disabled)
 #pragma config CPD = OFF        // Data Code Protection bit (Data memory code protection is disabled)
@@ -39,7 +39,7 @@ void PIC_init(){
     
     CMCON = 0x07; //disable comparator
     
-    TRISIO = 0x08; //Set 00001000. This means GP3 is input, the others are output.
+    TRISIO = 0b0001000; //Set 0001000. This means GP3 is input, the others are output.
     
     return;
 }
@@ -48,12 +48,40 @@ int main(int argc, char** argv) {
     
     // Initialize PIC
     PIC_init();
+    /*
+     * GP0: B
+     * GP1: C
+     * GP2: D
+     * GP4: A
+     * Comment: 2104 => DCBA => e.g) LLLL
+     */
+    unsigned char gpio[10] = {
+        0b000000, // LLLL => 0
+        0b010000, // LLLH => 1
+        0b000001, // LLHL => 2
+        0b010001, // LLHH => 3
+        0b000010, // LHLL => 4
+        0b010010, // LHLH => 5
+        0b000011, // LHHL => 6
+        0b010011, // LHHH => 7
+        0b000100, // HLLL => 8 Note: GP3 is input
+        0b010100, // HLLH => 9
+    };
+    unsigned int counter = 0;
+    GPIO = gpio[counter];
     
     while(1){
-        GPIO = 0x01; // Set GP0 high
-        __delay_ms(500);
-        GPIO = 0x00; // Set All GPIO low
-        __delay_ms(500);
+        if (GP3 == 1){
+            counter = (counter + 1) % 10;
+            GPIO = gpio[counter];
+            GPIO += 0b100000; // Set GP5 = H means turn on the external light
+            // delay for the next detection
+            __delay_ms(5000);
+        }
+        else{
+            GPIO = gpio[counter];
+            __delay_ms(100);
+        }
    }
     return (EXIT_SUCCESS);
 }
